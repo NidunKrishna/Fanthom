@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fathom — Technical flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F8FB; --surface:#FFFFFF; --ink:#14171F; --ink-soft:#5B6072;
+    --border:#E2E5ED; --primary:#3454D1; --primary-soft:#EBEFFC;
+    --amber:#F2A73B; --amber-soft:#FDF3E2; --success:#2E9E6D; --success-soft:#E8F5EF;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter',sans-serif; background:#E9EBF2; color:var(--ink);
+    padding:40px 20px;
+  }
+  .page{ max-width:980px; margin:0 auto; }
+  .header{ margin-bottom:28px; }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--primary); margin-bottom:8px;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:500; font-size:28px; margin-bottom:6px; }
+  .header p{ font-size:14px; color:var(--ink-soft); max-width:640px; line-height:1.55; }
+
+  .flow{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:36px 32px; box-shadow:0 20px 60px -24px rgba(20,23,31,0.2);
+  }
+
+  .stage-group{ display:flex; gap:24px; align-items:stretch; margin-bottom:6px; }
+  .stage-index{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft);
+    width:26px; flex-shrink:0; padding-top:4px;
+  }
+  .stage-body{ flex:1; }
+  .stage-label{
+    font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-soft); margin-bottom:10px;
+  }
+  .node-row{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  .node{
+    border-radius:10px; padding:14px 16px; flex:1; min-width:180px;
+    border:1px solid var(--border); background:var(--bg);
+  }
+  .node.blue{ background:var(--primary-soft); border-color:#C9D4F5; }
+  .node.amber{ background:var(--amber-soft); border-color:#F0DBAE; }
+  .node.success{ background:var(--success-soft); border-color:#C7E8D8; }
+  .node.purple{ background:#F1EEFB; border-color:#DAD3F3; }
+  .node .n-title{ font-size:13.5px; font-weight:600; margin-bottom:4px; }
+  .node.blue .n-title{ color:#1E3A93; }
+  .node.amber .n-title{ color:#8A5A16; }
+  .node.success .n-title{ color:#1F7A54; }
+  .node.purple .n-title{ color:#4A3B8A; }
+  .node .n-sub{ font-size:12px; color:var(--ink-soft); line-height:1.5; }
+  .node .n-tag{
+    display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10px;
+    margin-top:8px; padding:2px 7px; border-radius:5px; background:rgba(255,255,255,0.6);
+    color:var(--ink-soft);
+  }
+
+  .connector{
+    display:flex; justify-content:center; align-items:center; padding:6px 0 6px 40px;
+  }
+  .connector .line{
+    width:1px; height:22px; background:var(--border);
+    position:relative;
+  }
+  .connector .line::after{
+    content:''; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%);
+    border-left:4px solid transparent; border-right:4px solid transparent;
+    border-top:6px solid var(--border);
+  }
+
+  .branch-wrap{ padding-left:40px; }
+  .branch-line{
+    height:1px; background:var(--border); margin:6px 0 14px 0; position:relative;
+  }
+  .branch-line::before, .branch-line::after{
+    content:''; position:absolute; top:-6px; width:1px; height:6px; background:var(--border);
+  }
+  .branch-line::before{ left:0; }
+  .branch-line::after{ right:0; }
+
+  .legend{
+    display:flex; gap:18px; margin-top:26px; padding-top:20px; border-top:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); }
+  .swatch{ width:11px; height:11px; border-radius:4px; flex-shrink:0; }
+  .swatch.blue{ background:var(--primary); }
+  .swatch.amber{ background:var(--amber); }
+  .swatch.success{ background:var(--success); }
+  .swatch.purple{ background:#7F77DD; }
+  .swatch.bg{ background:#B4B2A9; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="eyebrow">Fathom · Technical flow</div>
+    <h1>From sample repo to a live recommendation</h1>
+    <p>End-to-end pipeline for the MVP: ingesting a codebase through RAG, writing what it learns into the shared context graph, then running the agent loop that turns that context into an executed recommendation.</p>
+  </div>
+
+  <div class="flow">
+
+    <!-- Stage 1: Ingestion -->
+    <div class="stage-group">
+      <div class="stage-index">01</div>
+      <div class="stage-body">
+        <div class="stage-label">Ingestion</div>
+        <div class="node-row">
+          <div class="node">
+            <div class="n-title">Sample repo</div>
+            <div class="n-sub">Scaffolded toy app first, then a real open-source repo.</div>
+            <span class="n-tag">github.com/...</span>
+          </div>
+          <div class="node">
+            <div class="n-title">Tree-sitter parser</div>
+            <div class="n-sub">Splits code into meaningful units — functions, routes, schema.</div>
+            <span class="n-tag">AST parse</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 2: RAG indexing -->
+    <div class="stage-group">
+      <div class="stage-index">02</div>
+      <div class="stage-body">
+        <div class="stage-label">RAG indexing</div>
+        <div class="node-row">
+          <div class="node blue">
+            <div class="n-title">Embedding model</div>
+            <div class="n-sub">Turns each code unit into a vector for semantic retrieval.</div>
+          </div>
+          <div class="node blue">
+            <div class="n-title">Vector store</div>
+            <div class="n-sub">Chroma or Pinecone — the retrieval index for code search.</div>
+            <span class="n-tag">RAG layer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 3: Analysis -->
+    <div class="stage-group">
+      <div class="stage-index">03</div>
+      <div class="stage-body">
+        <div class="stage-label">Analysis</div>
+        <div class="node-row">
+          <div class="node amber">
+            <div class="n-title">Analyzer agent</div>
+            <div class="n-sub">Retrieves relevant code, an LLM call extracts entities and how they connect.</div>
+            <span class="n-tag">RAG + LLM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 4: Context graph -->
+    <div class="stage-group">
+      <div class="stage-index">04</div>
+      <div class="stage-body">
+        <div class="stage-label">Shared memory</div>
+        <div class="node-row">
+          <div class="node purple">
+            <div class="n-title">Context graph</div>
+            <div class="n-sub">Structured knowledge — this endpoint maps to this data model, this user relates to this session. Every downstream agent reads and writes here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 5: Agent runtime -->
+    <div class="stage-group">
+      <div class="stage-index">05</div>
+      <div class="stage-body">
+        <div class="stage-label">Agent runtime</div>
+        <div class="node-row">
+          <div class="node">
+            <div class="n-title">Orchestrator</div>
+            <div class="n-sub">Routes each request to the right agent, reading current state from the graph.</div>
+          </div>
+        </div>
+        <div class="branch-wrap">
+          <div class="branch-line"></div>
+          <div class="node-row">
+            <div class="node success">
+              <div class="n-title">Recommender</div>
+              <div class="n-sub">Ranks candidates using graph context.</div>
+            </div>
+            <div class="node success">
+              <div class="n-title">Validator</div>
+              <div class="n-sub">Checks safety and business rules.</div>
+            </div>
+            <div class="node success">
+              <div class="n-title">Executor</div>
+              <div class="n-sub">Writes the result back out via MCP.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 6: Output -->
+    <div class="stage-group">
+      <div class="stage-index">06</div>
+      <div class="stage-body">
+        <div class="stage-label">Output</div>
+        <div class="node-row">
+          <div class="node">
+            <div class="n-title">Customer's systems</div>
+            <div class="n-sub">A live recommendation lands in the client's product surface.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="swatch bg"></span>Ingestion &amp; output</div>
+      <div class="legend-item"><span class="swatch blue"></span>RAG indexing</div>
+      <div class="legend-item"><span class="swatch amber"></span>LLM analysis</div>
+      <div class="legend-item"><span class="swatch purple"></span>Shared context graph</div>
+      <div class="legend-item"><span class="swatch success"></span>Agent runtime</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fathom — Ingestion → Knowledge Graph</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F8FB; --surface:#FFFFFF; --ink:#14171F; --ink-soft:#5B6072;
+    --border:#E2E5ED; --primary:#3454D1; --primary-soft:#EBEFFC;
+    --amber:#F2A73B; --amber-soft:#FDF3E2; --success:#2E9E6D; --success-soft:#E8F5EF;
+    --purple:#7F77DD; --purple-soft:#F1EEFB; --purple-border:#DAD3F3;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter',sans-serif; background:#E9EBF2; color:var(--ink);
+    padding:40px 20px;
+  }
+  .page{ max-width:1080px; margin:0 auto; }
+  .header{ margin-bottom:28px; }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--primary); margin-bottom:8px;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:500; font-size:27px; margin-bottom:6px; }
+  .header p{ font-size:14px; color:var(--ink-soft); max-width:720px; line-height:1.55; }
+
+  .flow{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:36px 32px; box-shadow:0 20px 60px -24px rgba(20,23,31,0.2);
+  }
+
+  .stage-group{ margin-bottom:6px; }
+  .stage-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:14px; }
+  .stage-index{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft); }
+  .stage-label{
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-soft);
+  }
+  .stage-note{ font-size:12px; color:var(--ink-soft); margin:-8px 0 16px; line-height:1.5; max-width:760px; }
+
+  /* Raw source cards */
+  .node-row{ display:flex; gap:14px; flex-wrap:wrap; }
+  .node{
+    border-radius:10px; padding:13px 15px; flex:1; min-width:210px;
+    border:1px solid var(--border); background:var(--bg);
+  }
+  .node .n-title{ font-size:13px; font-weight:600; margin-bottom:5px; }
+  .node .n-sub{ font-size:11.5px; color:var(--ink-soft); line-height:1.5; }
+  .node .n-fields{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; margin-top:8px;
+    padding:7px 9px; border-radius:6px; background:#F3F4F8; color:#3A3F52;
+    line-height:1.6; word-break:break-word;
+  }
+
+  .connector{ display:flex; justify-content:center; align-items:center; padding:8px 0; }
+  .connector .line{ width:1px; height:20px; background:var(--border); position:relative; }
+  .connector .line::after{
+    content:''; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%);
+    border-left:4px solid transparent; border-right:4px solid transparent;
+    border-top:6px solid var(--border);
+  }
+
+  /* Two parallel ingestion lanes */
+  .lane-row{ display:flex; gap:20px; align-items:stretch; }
+  .lane{
+    flex:1; border-radius:12px; padding:16px; display:flex; flex-direction:column;
+    border:1px solid var(--border);
+  }
+  .lane.struct{ background:var(--primary-soft); border-color:#C9D4F5; }
+  .lane.unstruct{ background:var(--amber-soft); border-color:#F0DBAE; }
+  .lane-head{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px; }
+  .lane.struct .lane-head{ color:#1E3A93; }
+  .lane.unstruct .lane-head{ color:#8A5A16; }
+  .lane-sub{ font-size:11px; color:var(--ink-soft); margin-bottom:14px; line-height:1.5; }
+
+  .lane-step{ background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:11px 13px; margin-bottom:9px; }
+  .lane-step .ls-num{ font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ink-soft); margin-bottom:3px; }
+  .lane-step .ls-title{ font-size:12.5px; font-weight:600; margin-bottom:4px; }
+  .lane-step .ls-sub{ font-size:11.5px; color:var(--ink-soft); line-height:1.5; }
+  .lane-step .ls-example{
+    font-family:'JetBrains Mono',monospace; font-size:10px; margin-top:7px; padding:7px 9px;
+    border-radius:6px; background:#F3F4F8; color:#3A3F52; overflow-x:auto; white-space:pre;
+  }
+  .lane-step .ls-tag{
+    display:inline-block; font-family:'JetBrains Mono',monospace; font-size:9.5px;
+    margin-top:7px; padding:2px 6px; border-radius:5px; background:rgba(255,255,255,0.7);
+    color:var(--ink-soft);
+  }
+  .lane-arrow{ text-align:center; font-size:13px; color:var(--ink-soft); margin:-3px 0 8px; }
+
+  .merge-wrap{ display:flex; justify-content:center; padding:16px 0; }
+  .merge-label{
+    font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--ink-soft);
+    border:1px dashed var(--border); border-radius:20px; padding:5px 14px; background:var(--bg);
+  }
+
+  /* Single-column post-merge steps */
+  .step-full{
+    border:1px solid var(--border); border-radius:10px; padding:14px 16px; background:var(--bg);
+    margin-bottom:10px;
+  }
+  .step-full.purple{ background:var(--purple-soft); border-color:var(--purple-border); }
+  .step-full.success{ background:var(--success-soft); border-color:#C7E8D8; }
+  .step-full .sf-title{ font-size:13px; font-weight:600; margin-bottom:4px; }
+  .step-full.purple .sf-title{ color:#4A3B8A; }
+  .step-full.success .sf-title{ color:#1F7A54; }
+  .step-full .sf-sub{ font-size:12px; color:var(--ink-soft); line-height:1.55; }
+  .step-full .sf-example{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; margin-top:8px; padding:8px 10px;
+    border-radius:6px; background:#F3F4F8; color:#3A3F52; overflow-x:auto; white-space:pre;
+  }
+
+  /* Schema reference */
+  .schema-box{ border:1px solid var(--border); border-radius:12px; padding:18px 20px; background:var(--bg); }
+  .schema-col-row{ display:flex; gap:24px; flex-wrap:wrap; }
+  .schema-col{ flex:1; min-width:260px; }
+  .schema-col-title{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--ink-soft); margin-bottom:10px;
+  }
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-size:11.5px; padding:5px 10px; border-radius:7px; font-weight:500;
+    background:var(--purple-soft); border:1px solid var(--purple-border); color:#4A3B8A;
+  }
+  .edge-list{ display:flex; flex-direction:column; gap:7px; }
+  .edge-item{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:#3A3F52;
+    background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:6px 9px;
+  }
+  .edge-item b{ color:var(--ink); font-weight:600; }
+
+  .legend{
+    display:flex; gap:18px; margin-top:26px; padding-top:20px; border-top:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); }
+  .swatch{ width:11px; height:11px; border-radius:4px; flex-shrink:0; }
+  .swatch.blue{ background:var(--primary); }
+  .swatch.amber{ background:var(--amber); }
+  .swatch.success{ background:var(--success); }
+  .swatch.purple{ background:var(--purple); }
+  .swatch.bg{ background:#B4B2A9; }
+
+  .section-gap{ height:8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="eyebrow">Fathom · Ingestion detail</div>
+    <h1>Ingestion → Knowledge Graph construction</h1>
+    <p>Zoomed into stage 01–03 only. Two kinds of raw data come in — structured events/records and unstructured text — and take different extraction paths before merging into one knowledge graph. Structured data is mapped deterministically; unstructured text goes through a LangChain + LLM extraction step. Both converge through entity resolution before being written to the graph.</p>
+  </div>
+
+  <div class="flow">
+
+    <!-- 01 Raw inputs -->
+    <div class="stage-group">
+      <div class="stage-head"><span class="stage-index">01</span><span class="stage-label">Raw inputs</span></div>
+      <div class="node-row">
+        <div class="node">
+          <div class="n-title">User profile</div>
+          <div class="n-sub">Structured record, written once / updated rarely.</div>
+          <div class="n-fields">user_id, signup_date, age_bracket, locale, stated_interests[]</div>
+        </div>
+        <div class="node">
+          <div class="n-title">Interaction events</div>
+          <div class="n-sub">Structured, streamed continuously from the app.</div>
+          <div class="n-fields">user_id, video_id, event_type: watch|like|skip|share|comment, timestamp, watch_duration_sec, completion_pct</div>
+        </div>
+        <div class="node">
+          <div class="n-title">Search events</div>
+          <div class="n-sub">Structured, streamed.</div>
+          <div class="n-fields">user_id, query_text, timestamp, clicked_video_id</div>
+        </div>
+        <div class="node">
+          <div class="n-title">Video catalog record</div>
+          <div class="n-sub">Structured, batch-updated per upload.</div>
+          <div class="n-fields">video_id, title, category, tags[], creator_id, duration_sec, upload_date, view_count, like_count</div>
+        </div>
+        <div class="node">
+          <div class="n-title">Video transcript / captions</div>
+          <div class="n-sub">Unstructured free text, one per video.</div>
+        </div>
+        <div class="node">
+          <div class="n-title">Video description &amp; creator bio</div>
+          <div class="n-sub">Unstructured free text.</div>
+        </div>
+        <div class="node">
+          <div class="n-title">User comments / reviews / bio</div>
+          <div class="n-sub">Unstructured free text, user-generated.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 02 Parallel ingestion paths -->
+    <div class="stage-group">
+      <div class="stage-head"><span class="stage-index">02</span><span class="stage-label">Ingestion — two parallel paths</span></div>
+      <div class="stage-note">Structured records already carry clean IDs and typed fields, so they skip the LLM entirely. Only free text goes through extraction — cheaper, faster, and avoids letting an LLM hallucinate a relationship that a field already states exactly.</div>
+
+      <div class="lane-row">
+        <!-- Structured lane -->
+        <div class="lane struct">
+          <div class="lane-head">Structured path — deterministic</div>
+          <div class="lane-sub">No LLM call. A fixed mapping table turns each record type directly into node/edge upserts.</div>
+
+          <div class="lane-step">
+            <div class="ls-num">2a.1</div>
+            <div class="ls-title">Schema validation</div>
+            <div class="ls-sub">Incoming record checked against its expected shape; malformed records are quarantined, not dropped.</div>
+          </div>
+          <div class="lane-arrow">↓</div>
+          <div class="lane-step">
+            <div class="ls-num">2a.2</div>
+            <div class="ls-title">Field → graph mapping</div>
+            <div class="ls-sub">Rule-based transformer, one mapping per record type.</div>
+            <div class="ls-example">watch event
+  → (User)-[:WATCHED {ts, duration, completion}]->(Video)
+video catalog record
+  → (Video)-[:CREATED_BY]->(Creator)
+  → (Video)-[:HAS_TAG]->(Tag) per tag[]</div>
+          </div>
+          <div class="lane-arrow">↓</div>
+          <div class="lane-step">
+            <div class="ls-num">2a.3</div>
+            <div class="ls-title">ID normalization</div>
+            <div class="ls-sub">user_id / video_id / creator_id looked up against canonical KG IDs; new IDs create a new node, known IDs update in place.</div>
+            <span class="ls-tag">rule-based, no LLM</span>
+          </div>
+        </div>
+
+        <!-- Unstructured lane -->
+        <div class="lane unstruct">
+          <div class="lane-head">Unstructured path — LLM extraction</div>
+          <div class="lane-sub">LangChain-orchestrated. Only source of nodes/edges the LLM has to infer rather than read off a field.</div>
+
+          <div class="lane-step">
+            <div class="ls-num">2b.1</div>
+            <div class="ls-title">Chunking</div>
+            <div class="ls-sub">Transcripts, descriptions, bios, comments split into ~500-token passages, each tagged with its source_id and source_type.</div>
+          </div>
+          <div class="lane-arrow">↓</div>
+          <div class="lane-step">
+            <div class="ls-num">2b.2</div>
+            <div class="ls-title">LangChain LLMGraphTransformer</div>
+            <div class="ls-sub">Each chunk sent to Gemini with an allowed node/relationship ontology, so extraction stays inside the target schema instead of free-form.</div>
+            <div class="ls-example">allowed_nodes = [Topic, Entity, Creator, Video]
+allowed_relationships = [MENTIONS, HAS_TOPIC, ABOUT]
+transcript chunk → (Video)-[:MENTIONS]->(Entity "Tesla")
+                 → (Video)-[:HAS_TOPIC]->(Topic "EVs")</div>
+            <span class="ls-tag">LangChain · Gemini</span>
+          </div>
+          <div class="lane-arrow">↓</div>
+          <div class="lane-step">
+            <div class="ls-num">2b.3</div>
+            <div class="ls-title">Confidence scoring</div>
+            <div class="ls-sub">Every extracted node/edge carries the LLM's confidence; anything below threshold is flagged for review instead of auto-committed to the KG.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="merge-wrap"><div class="merge-label">merge</div></div>
+
+    <!-- 03 Entity resolution -->
+    <div class="stage-group">
+      <div class="stage-head"><span class="stage-index">03</span><span class="stage-label">Entity resolution</span></div>
+      <div class="step-full purple">
+        <div class="sf-title">Canonicalize before writing</div>
+        <div class="sf-sub">Structured entities already have IDs, so they resolve by direct match. LLM-extracted topics/entities don't — "e-bikes" and "electric bikes" must land on the same node. Candidate names are embedded and compared against existing KG node embeddings (reusing the embedding model from the RAG layer); above a similarity threshold they're aliased onto the existing node, below it they create a new one.</div>
+        <div class="sf-example">embed("e-bikes") · embed("electric bikes") → cosine 0.94 ≥ 0.90 threshold
+  → alias "e-bikes" onto existing Topic node "electric bikes"</div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 04 Graph write -->
+    <div class="stage-group">
+      <div class="stage-head"><span class="stage-index">04</span><span class="stage-label">Graph write</span></div>
+      <div class="node-row">
+        <div class="node">
+          <div class="n-title">Streaming upsert</div>
+          <div class="n-sub">Interaction &amp; search events write near-real-time, so WATCHED/LIKED/SKIPPED edges land within minutes of the action.</div>
+        </div>
+        <div class="node">
+          <div class="n-title">Batch upsert</div>
+          <div class="n-sub">Catalog metadata and unstructured extraction run on a nightly batch, since transcripts/descriptions rarely change after upload.</div>
+        </div>
+        <div class="node">
+          <div class="n-title">Idempotent keys</div>
+          <div class="n-sub">Nodes keyed by canonical ID, edges keyed by (source, target, edge_type) — reprocessing the same event never duplicates a node or edge.</div>
+        </div>
+      </div>
+      <div class="stage-note" style="margin-top:12px;">Target store today is <b style="color:var(--ink)">graph_ds.Graph</b> in-memory; a persistent graph DB (Neo4j / Memgraph) would sit here unchanged once scale requires it — the mapping and extraction steps above don't depend on which store it is.</div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- 05 Validation -->
+    <div class="stage-group">
+      <div class="stage-head"><span class="stage-index">05</span><span class="stage-label">Validation gate</span></div>
+      <div class="step-full success">
+        <div class="sf-title">Before commit</div>
+        <div class="sf-sub">Ontology check — reject any node/edge type not in the allowed schema below. Orphan check — an edge referencing a node that doesn't exist yet is queued and retried rather than silently dropped (handles out-of-order events, e.g. a watch event arriving before its video's catalog record).</div>
+      </div>
+    </div>
+
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Resulting schema -->
+    <div class="stage-group">
+      <div class="stage-head"><span class="stage-index">→</span><span class="stage-label">Resulting KG schema</span></div>
+      <div class="schema-box">
+        <div class="schema-col-row">
+          <div class="schema-col">
+            <div class="schema-col-title">Node types</div>
+            <div class="chip-row">
+              <div class="chip">User</div>
+              <div class="chip">Video</div>
+              <div class="chip">Creator</div>
+              <div class="chip">Topic</div>
+              <div class="chip">Tag</div>
+              <div class="chip">Entity</div>
+              <div class="chip">Query</div>
+            </div>
+          </div>
+          <div class="schema-col">
+            <div class="schema-col-title">Edge types</div>
+            <div class="edge-list">
+              <div class="edge-item"><b>User</b> -[WATCHED {ts, duration, completion}]-&gt; <b>Video</b></div>
+              <div class="edge-item"><b>User</b> -[LIKED / SKIPPED]-&gt; <b>Video</b></div>
+              <div class="edge-item"><b>User</b> -[PREFERS]-&gt; <b>Topic</b></div>
+              <div class="edge-item"><b>User</b> -[SEARCHED]-&gt; <b>Query</b></div>
+              <div class="edge-item"><b>Video</b> -[HAS_TOPIC / HAS_TAG]-&gt; <b>Topic / Tag</b></div>
+              <div class="edge-item"><b>Video</b> -[CREATED_BY]-&gt; <b>Creator</b></div>
+              <div class="edge-item"><b>Video</b> -[MENTIONS]-&gt; <b>Entity</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="swatch bg"></span>Raw inputs</div>
+      <div class="legend-item"><span class="swatch blue"></span>Structured / deterministic path</div>
+      <div class="legend-item"><span class="swatch amber"></span>Unstructured / LLM path</div>
+      <div class="legend-item"><span class="swatch purple"></span>Entity resolution</div>
+      <div class="legend-item"><span class="swatch success"></span>Write &amp; validation</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
