@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fathom — Recommendation pipeline (LangChain)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F7F8FB; --surface:#FFFFFF; --ink:#14171F; --ink-soft:#5B6072;
+    --border:#E2E5ED; --primary:#3454D1; --primary-soft:#EBEFFC;
+    --amber:#F2A73B; --amber-soft:#FDF3E2; --success:#2E9E6D; --success-soft:#E8F5EF;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter',sans-serif; background:#E9EBF2; color:var(--ink);
+    padding:40px 20px;
+  }
+  .page{ max-width:980px; margin:0 auto; }
+  .header{ margin-bottom:28px; }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--primary); margin-bottom:8px;
+  }
+  h1{ font-family:'Fraunces',serif; font-weight:500; font-size:28px; margin-bottom:6px; }
+  .header p{ font-size:14px; color:var(--ink-soft); max-width:660px; line-height:1.55; }
+
+  .flow{
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:36px 32px; box-shadow:0 20px 60px -24px rgba(20,23,31,0.2);
+  }
+
+  .stage-group{ display:flex; gap:24px; align-items:stretch; margin-bottom:6px; }
+  .stage-index{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-soft);
+    width:26px; flex-shrink:0; padding-top:4px;
+  }
+  .stage-body{ flex:1; }
+  .stage-label{
+    font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-soft); margin-bottom:10px;
+  }
+  .node-row{ display:flex; gap:14px; flex-wrap:wrap; }
+
+  .node{
+    border-radius:10px; padding:14px 16px; flex:1; min-width:180px;
+    border:1px solid var(--border); background:var(--bg);
+  }
+  .node.blue{ background:var(--primary-soft); border-color:#C9D4F5; }
+  .node.amber{ background:var(--amber-soft); border-color:#F0DBAE; }
+  .node.success{ background:var(--success-soft); border-color:#C7E8D8; }
+  .node.purple{ background:#F1EEFB; border-color:#DAD3F3; }
+  .node .n-title{ font-size:13.5px; font-weight:600; margin-bottom:4px; }
+  .node.blue .n-title{ color:#1E3A93; }
+  .node.amber .n-title{ color:#8A5A16; }
+  .node.success .n-title{ color:#1F7A54; }
+  .node.purple .n-title{ color:#4A3B8A; }
+  .node .n-sub{ font-size:12px; color:var(--ink-soft); line-height:1.5; }
+  .node .n-tag{
+    display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10px;
+    margin-top:8px; padding:2px 7px; border-radius:5px; background:rgba(255,255,255,0.6);
+    color:var(--ink-soft);
+  }
+
+  .connector{
+    display:flex; justify-content:center; align-items:center; padding:6px 0 6px 40px;
+  }
+  .connector .line{
+    width:1px; height:22px; background:var(--border);
+    position:relative;
+  }
+  .connector .line::after{
+    content:''; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%);
+    border-left:4px solid transparent; border-right:4px solid transparent;
+    border-top:6px solid var(--border);
+  }
+
+  .branch-wrap{ padding-left:40px; }
+  .branch-line{
+    height:1px; background:var(--border); margin:6px 0 14px 0; position:relative;
+  }
+  .branch-line::before, .branch-line::after{
+    content:''; position:absolute; top:-6px; width:1px; height:6px; background:var(--border);
+  }
+  .branch-line::before{ left:0; }
+  .branch-line::after{ right:0; }
+
+  /* Adapter inset -- shows the Recommender agent's pluggable strategies */
+  .adapter-inset{
+    margin-top:14px; margin-left:0; border:1px dashed #C7E8D8; border-radius:10px;
+    padding:14px 16px; background:#FBFEFC;
+  }
+  .adapter-inset .ai-title{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.03em;
+    color:#1F7A54; margin-bottom:10px; text-transform:uppercase;
+  }
+  .adapter-chip-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .adapter-chip{
+    font-size:12px; padding:6px 10px; border-radius:7px; background:var(--success-soft);
+    border:1px solid #C7E8D8; color:#1F7A54; font-weight:500;
+  }
+  .adapter-chip.dashed{ background:transparent; border-style:dashed; color:var(--ink-soft); }
+
+  .legend{
+    display:flex; gap:18px; margin-top:26px; padding-top:20px; border-top:1px solid var(--border);
+    flex-wrap:wrap;
+  }
+  .legend-item{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); }
+  .swatch{ width:11px; height:11px; border-radius:4px; flex-shrink:0; }
+  .swatch.blue{ background:var(--primary); }
+  .swatch.amber{ background:var(--amber); }
+  .swatch.success{ background:var(--success); }
+  .swatch.purple{ background:#7F77DD; }
+  .swatch.bg{ background:#B4B2A9; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="eyebrow">Fathom · Recommendation pipeline</div>
+    <h1>From user &amp; content data to a served recommendation</h1>
+    <p>Draft implementation flow: user details and content metadata are ingested into a knowledge graph, then three LangChain agents — Recommender, Validator, Executor — run under an orchestrator. The Recommender is a standalone agent, itself built as a swappable adapter over multiple ranking strategies.</p>
+  </div>
+
+  <div class="flow">
+
+    <!-- Stage 1: Data sources -->
+    <div class="stage-group">
+      <div class="stage-index">01</div>
+      <div class="stage-body">
+        <div class="stage-label">Data sources</div>
+        <div class="node-row">
+          <div class="node">
+            <div class="n-title">User details</div>
+            <div class="n-sub">Profile, stated preferences, watch/interaction history.</div>
+          </div>
+          <div class="node">
+            <div class="n-title">Content catalog</div>
+            <div class="n-sub">Video metadata — topic, creator, tags, engagement stats.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 2: Ingestion agent -->
+    <div class="stage-group">
+      <div class="stage-index">02</div>
+      <div class="stage-body">
+        <div class="stage-label">Ingestion agent</div>
+        <div class="node-row">
+          <div class="node amber">
+            <div class="n-title">Ingestion &amp; extraction agent</div>
+            <div class="n-sub">LangChain agent that reads raw user + content records and an LLM call extracts entities and the relationships between them (user ↔ video, video ↔ topic, ...).</div>
+            <span class="n-tag">LangChain · LLM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 3: Knowledge graph -->
+    <div class="stage-group">
+      <div class="stage-index">03</div>
+      <div class="stage-body">
+        <div class="stage-label">Shared memory</div>
+        <div class="node-row">
+          <div class="node purple">
+            <div class="n-title">Knowledge graph (KG)</div>
+            <div class="n-sub">Structured graph built from ingestion: this user watched/liked this video, this video belongs to this topic. Determines which videos are even candidates for a given user. Every downstream agent reads from here.</div>
+            <span class="n-tag">graph_ds-backed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 4: Agent runtime -->
+    <div class="stage-group">
+      <div class="stage-index">04</div>
+      <div class="stage-body">
+        <div class="stage-label">Agent runtime — LangChain, 3 agents</div>
+        <div class="node-row">
+          <div class="node">
+            <div class="n-title">Orchestrator</div>
+            <div class="n-sub">Routes each request across the three agents below, reading current state from the KG.</div>
+          </div>
+        </div>
+        <div class="branch-wrap">
+          <div class="branch-line"></div>
+          <div class="node-row">
+            <div class="node success">
+              <div class="n-title">Recommender agent</div>
+              <div class="n-sub">Standalone agent — can run inside the orchestrator or be called directly. Ranks candidate videos for a user from the KG.</div>
+              <span class="n-tag">standalone + adapter</span>
+              <div class="adapter-inset">
+                <div class="ai-title">Pluggable ranking strategies</div>
+                <div class="adapter-chip-row">
+                  <div class="adapter-chip">Graph-based (KG proximity)</div>
+                  <div class="adapter-chip">Popularity fallback</div>
+                  <div class="adapter-chip dashed">LLM re-ranker (planned)</div>
+                </div>
+              </div>
+            </div>
+            <div class="node success">
+              <div class="n-title">Validator agent</div>
+              <div class="n-sub">Checks safety, content policy, and business rules before anything ships.</div>
+              <span class="n-tag">LangChain</span>
+            </div>
+            <div class="node success">
+              <div class="n-title">Executor agent</div>
+              <div class="n-sub">Writes the final recommendation list back out to the product surface.</div>
+              <span class="n-tag">LangChain</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="connector"><div class="line"></div></div>
+
+    <!-- Stage 5: Output -->
+    <div class="stage-group">
+      <div class="stage-index">05</div>
+      <div class="stage-body">
+        <div class="stage-label">Output</div>
+        <div class="node-row">
+          <div class="node">
+            <div class="n-title">Product surface</div>
+            <div class="n-sub">Ranked, validated videos land in the user's feed.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="swatch bg"></span>Data &amp; output</div>
+      <div class="legend-item"><span class="swatch amber"></span>LLM ingestion</div>
+      <div class="legend-item"><span class="swatch purple"></span>Knowledge graph</div>
+      <div class="legend-item"><span class="swatch success"></span>Agent runtime (LangChain)</div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-﻿# Aphrodite.ai
+# Aphrodite.ai
 
 An editorial React experience with a cinematic introduction and a FastAPI authentication service.
 
