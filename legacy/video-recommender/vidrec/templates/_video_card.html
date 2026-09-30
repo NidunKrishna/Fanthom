@@ -1,0 +1,10 @@
+{% macro video_card(v) %}
+<a class="video-card" href="{{ url_for('videos.video_detail', video_id=v.id) }}">
+  <img src="{{ v.thumbnail }}" alt="{{ v.title }}">
+  <div class="video-card-body">
+    <h3>{{ v.title }}</h3>
+    <span class="badge">{{ v.category }}</span>
+    <p>{{ v.description }}</p>
+  </div>
+</a>
+{% endmacro %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_video_card.html" import video_card %}
+{% block title %}{{ video.title }} - VidRec{% endblock %}
+
+{% block content %}
+  <div class="video-detail">
+    <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="video-hero">
+    <h1>{{ video.title }}</h1>
+    <span class="badge">{{ video.category }}</span>
+    <p>{{ video.description }}</p>
+    <p class="tags">Tags: {{ video.tags }}</p>
+
+    <form action="{{ url_for('videos.like_video', video_id=video.id) }}" method="post">
+      <button type="submit" class="like-btn">👍 Like this video</button>
+    </form>
+  </div>
+
+  <section>
+    <h2>Similar videos</h2>
+    <div class="video-grid">
+      {% for v in similar %}
+        {{ video_card(v) }}
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}VidRec{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="navbar">
+    <a href="{{ url_for('videos.home') }}" class="logo">🎬 VidRec</a>
+
+    <form action="{{ url_for('videos.search') }}" method="get" class="search-form">
+      <input type="text" name="q" placeholder="Search videos..." required>
+      <button type="submit">Search</button>
+    </form>
+
+    <nav class="nav-links">
+      {% if current_user %}
+        <a href="{{ url_for('profile.profile') }}" class="user-chip">
+          <img src="{{ current_user.picture }}" alt="avatar" class="avatar">
+          {{ current_user.name }}
+        </a>
+        <a href="{{ url_for('auth.logout') }}">Logout</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="google-btn">Sign in with Google</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
