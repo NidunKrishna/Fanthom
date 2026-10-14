@@ -3,12 +3,26 @@ import { AnimatePresence } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
 import SplashIntro from './components/SplashIntro';
 import LoginCard from './components/LoginCard';
-import PrivateSpace from './components/PrivateSpace';
+import VideoFeed from './components/VideoFeed';
 
 export default function App() {
   const [intro, setIntro] = useState(true);
   const [session, setSession] = useState(null);
   const [notice, setNotice] = useState('');
+  const [path, setPath] = useState(window.location.pathname);
+  const navigate = useCallback((next, replace = false) => {
+    window.history[replace ? 'replaceState' : 'pushState']({}, '', next);
+    setPath(next);
+  }, []);
+  useEffect(() => {
+    const update = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', update);
+    return () => window.removeEventListener('popstate', update);
+  }, []);
+  useEffect(() => {
+    if (!session && path === '/feed') navigate('/', true);
+    if (session && path !== '/feed') navigate('/feed', true);
+  }, [session, path, navigate]);
   const finishIntro = useCallback(() => setIntro(false), []);
 
   useEffect(() => {
@@ -23,6 +37,8 @@ export default function App() {
     return () => { clearTimeout(timer); document.removeEventListener('visibilitychange', check); };
   }, [session]);
 
+  if (session) return <VideoFeed session={session} onLogout={() => { setSession(null); setNotice('You have been signed out. Until next time.'); navigate('/', true); }} />;
+
   return (
     <>
       <div className="site-shell" inert={intro ? true : undefined} aria-hidden={intro || undefined}>
@@ -36,7 +52,7 @@ export default function App() {
             <div className="editorial-bottom"><span className="edition-number">N° 001</span><span className="eyebrow">INGEST. UNDERSTAND. RECOMMEND.</span><ArrowUpRight size={18} strokeWidth={1} /></div>
             <div className="orbit-art" aria-hidden="true"><i /><i /><i /><span>✦</span></div>
           </section>
-          <div className="auth-column"><div className="auth-caption"><span className="status-dot" /> YOUR SOURCE INTELLIGENCE WORKSPACE</div><AnimatePresence mode="wait">{session ? <PrivateSpace key="private" session={session} onLogout={() => { setSession(null); setNotice('You have been signed out. Until next time.'); }} /> : <LoginCard key="login" notice={notice} onAuthenticated={(value) => { setNotice(''); setSession(value); }} />}</AnimatePresence><p className="below-card">MORE CONTEXT. BETTER RECOMMENDATIONS.</p></div>
+          <div className="auth-column"><div className="auth-caption"><span className="status-dot" /> YOUR SOURCE INTELLIGENCE WORKSPACE</div><AnimatePresence mode="wait"><LoginCard key="login" notice={notice} onAuthenticated={(value) => { setNotice(''); setIntro(false); setSession(value); navigate('/feed'); }} /></AnimatePresence><p className="below-card">MORE CONTEXT. BETTER RECOMMENDATIONS.</p></div>
         </main>
         <footer className="site-footer"><span>© {new Date().getFullYear()} APHRODITE.AI</span><button onClick={() => setIntro(true)}>REPLAY THE INTRO <ArrowUpRight size={12} /></button><span className="footer-motto">CODEBASES. DOCUMENTS. DATA.</span></footer>
       </div>

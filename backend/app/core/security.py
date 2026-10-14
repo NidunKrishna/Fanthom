@@ -1,3 +1,4 @@
+"""Hash passwords and sign/validate expiring application JWTs."""
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -10,6 +11,7 @@ password_hasher = PasswordHash.recommended()
 
 
 def issue_token(username: str, settings: Settings) -> str:
+    """Sign an identity token with the configured lifetime, issuer, and audience."""
     now = datetime.now(timezone.utc)
     return jwt.encode({
         "sub": username,
@@ -22,6 +24,7 @@ def issue_token(username: str, settings: Settings) -> str:
 
 
 def decode_token(token: str, settings: Settings) -> dict:
+    """Verify HS256 signature, expiry, issuer, audience, and required claims."""
     return jwt.decode(
         token, settings.jwt_secret, algorithms=["HS256"],
         issuer="aphrodite.ai", audience="aphrodite-web",

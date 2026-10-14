@@ -24,3 +24,10 @@ export const login = (username, password) => request('/auth/login', {
 export const getProfile = (token) => request('/auth/me', {
   headers: { Authorization: `Bearer ${token}` },
 });
+export const getRecommendations = (token, videoId) => request(`/videos${videoId ? `?video_id=${encodeURIComponent(videoId)}` : ''}`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+export const saveReaction = (token, videoId, reaction) => request('/videos/reaction', {
+  method: 'POST', headers: { Authorization: `Bearer ${token}` },
+  body: JSON.stringify({ video_id: videoId, reaction }),
+});

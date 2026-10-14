@@ -4,10 +4,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from app.main import create_app
 from app.core.config import Settings
-
-@pytest.fixture
-def client():
-    return TestClient(create_app(Settings(jwt_secret='test-key-' * 8)))
+from conftest import MemoryRepository
 
 def test_login_and_protected_identity(client):
     response = client.post('/api/auth/login', json={'username': 'admin', 'password': 'root'})
@@ -59,7 +56,7 @@ def test_rate_limit(client):
     assert response.headers['retry-after'] == '60'
 
 def test_environment_credentials():
-    client = TestClient(create_app(Settings(username='editor', password='custom-password', jwt_secret='test-key-'*8)))
+    client = TestClient(create_app(Settings(username='editor', password='custom-password', jwt_secret='test-key-'*8), repository=MemoryRepository()))
     assert client.post('/api/auth/login', json={'username':'admin','password':'root'}).status_code == 401
     assert client.post('/api/auth/login', json={'username':'editor','password':'custom-password'}).status_code == 200
 

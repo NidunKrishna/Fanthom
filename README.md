@@ -17,7 +17,7 @@ backend/
   requirements-dev.txt
 frontend/
   src/
-    components/            # SplashIntro, LoginCard, PrivateSpace
+    components/            # SplashIntro, LoginCard, VideoFeed, VideoPlayer
     lib/api.js             # HTTP client with timeout/error handling
     App.jsx                # Experience and in-memory session lifecycle
     main.jsx
@@ -31,6 +31,33 @@ legacy/video-recommender/  # Original Flask project, preserved separately
 ```
 
 ## Run locally
+
+### Docker Compose
+
+With Docker Desktop running, ensure `backend/.env` contains your Neo4j settings
+(copy `backend/.env.example` if needed), then run from the repository root:
+
+```powershell
+docker compose up --build -d
+```
+
+Open **http://localhost:8080**. Nginx serves the frontend and forwards `/api/`
+requests to the private backend container on port 8000. The backend continues
+using your existing Aura database and its background catalog polling; no local
+Neo4j container is created. Environment files are excluded from image builds.
+
+```powershell
+docker compose logs -f
+docker compose down
+```
+
+Change the browser port with `$env:APP_PORT=8081` before starting. Restart after
+environment changes with `docker compose up -d --force-recreate`; rebuild after
+code changes with `docker compose up --build -d`. The browser port binds only to
+this computer by default. The backend health check reports process health,
+not database availability. Use explicit production credentials before deployment.
+
+### Without Docker
 
 Requires Python 3.11+ and Node.js 22.12+ (Node 24 is also supported).
 Open two terminals in this repository.
@@ -48,6 +75,15 @@ python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 On macOS/Linux, activate with `source .venv/bin/activate` and copy with `cp .env.example .env`.
 If PowerShell activation is unavailable, use `.\.venv\Scripts\python.exe` directly.
+
+If your virtual environment is in the repository root, run the API from that root:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir backend --reload --reload-dir backend --host 127.0.0.1 --port 8000
+```
+
+`--app-dir backend` makes `backend/app` importable. Running `uvicorn app.main:app`
+from the repository root without it raises `ModuleNotFoundError: No module named 'app'`.
 
 **Terminal 2 — frontend:**
 
@@ -82,8 +118,35 @@ Passwords are verified against an Argon2 hash. The demo password is hashed at st
 `ADMIN_PASSWORD_HASH` takes precedence. JWT validation pins HS256 and checks signature, expiration,
 issuer, audience, and required claims. The frontend checks `/api/auth/me` before showing the private
 space. Tokens remain in React memory; refresh and sign-out discard the client token. Sessions end
-automatically after 30 minutes. The welcome screen is the authenticated destination; no AI inference
-or additional workspace features are implied.
+automatically after 30 minutes. After sign-in, the video recommendations view calls the protected
+`GET /api/videos` endpoint. Select a video to call `GET /api/videos?video_id=<id>` for similar
+videos. Neo4j is the only catalog source; the CSV catalog and fallback have been removed.
+Successful login saves a graph user profile. Like/dislike buttons persist exclusive
+`LIKED` / `DISLIKED` relationships and influence subsequent recommendations.
+Install the updated `backend/requirements.txt` and restart the API when upgrading.
+
+### Neo4j video catalog
+
+Successful sign-in navigates to `/feed`, a separate vertical video discovery page.
+Scroll/swipe between cards, use arrow keys or the desktop navigation buttons,
+and select **Find similar** for related recommendations. Sign-out returns to `/`.
+Sessions remain in memory, so refreshing `/feed` requires signing in again.
+Add full HTTPS URLs to `Video.link` in Neo4j. The feed supports YouTube embeds,
+direct video file playback, and external watch links. Missing URLs fall back to a YouTube watch link for 11-character YouTube-format IDs; other IDs show previews. The active player requests muted autoplay.
+Production static hosting must serve `index.html` for `/feed` (SPA fallback).
+
+Set `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`, and `NEO4J_DATABASE` in
+the ignored `backend/.env` to load the Aura catalog and persist user profiles and
+preferences. A missing URI/database returns HTTP 503. Set `ADMIN_DISPLAY_NAME`
+for the graph profile's name (defaults to the username). The login system still
+supports one configured account. Credentials remain on the backend. On Windows,
+`truststore` uses the system certificate store with TLS verification enabled.
+See [the inspected schema and mapping](backend/NEO4J_SCHEMA.md). The adapter
+reads videos, creator names, and topics, polling Neo4j every 10 seconds and rebuilding vectors only when data changes. Configure the backend interval with `CATALOG_POLL_SECONDS`. The open feed checks every 10 seconds and appends newly recommended videos without interrupting playback.
+The latest graph check found no playback URLs. YouTube-format IDs now supply a fallback; explicit `link` values take precedence.
+Database connection failures appear as retryable errors.
+See [the backend guide](backend/BACKEND_GUIDE.md) for the modular structure and
+recommendation algorithm in `backend/app/services/recommender.py`.
 
 A random signing key is generated for local development if `JWT_SECRET` is absent, so restarting
 invalidates tokens. Set a persistent secret for stable sessions. Sign-out clears the browser session;
